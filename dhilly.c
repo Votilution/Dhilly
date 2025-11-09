@@ -12,18 +12,18 @@
 #include <stdio.h>
 #include "dhilly.h"
 
-DhillyString dhilly_string_create(const char *input, bool is_static) {
+DhillyString dhilly_string_create(const char *input, DhillyStringCleanupStrategy cleanup_strategy) {
     DhillyString str;
     str.data = input;
     str.length = strlen(input);
-    str.is_static = is_static;
+    str.cleanup_strategy = cleanup_strategy;
 
     return str;
 }
 
 void dhilly_string_free(DhillyString* string) {
     if (!string) return; 
-    if (string->is_static) return;
+    if (string->cleanup_strategy == DHILLY_STRING_NO_TOUCHY) return;
 
     if (string && string->data) {
         free((void*)string->data);
@@ -62,15 +62,26 @@ void dhilly_template_free(DhillyTemplate *template) {
 }
 
 void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, DhillyShardType type, void* contents, void* bound) {
-    template->shards[index].type = type;
-    if (type == SHARD_TYPE_STRING)
+    DhillyShard *target = &template->shards[index];
+
+    target->type = type;
+    switch (type)
     {
-        template->shards[index].str = *(DhillyString*)contents;
-    }
-    else
-    {
-        template->shards[index].callable.generate = (DhillyString (*)(void*, void*))contents;
-        template->shards[index].callable.bound_arg = bound;
+    case SHARD_TYPE_STRING:
+        target->str = *(DhillyString*)contents;
+        break;
+    
+    case SHARD_TYPE_FUNCTION:
+        target->callable.generate = (DhillyString (*)(void*, void*))contents;
+        target->callable.bound_arg = bound;
+        break;
+    
+    case SHARD_TYPE_TEMPLATE:
+        target->template.instance_ptr = *(DhillyInstance*)contents;
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -159,7 +170,7 @@ DhillyString dhilly_string_array_to_string(DhillyStringArray* input) {
     result_str[current_pos] = '\0';
 
     result.data = result_str;
-    result.is_static = false;
+    result.cleanup_strategy = DHILLY_STRING_FREE;
     result.length = current_pos;
 
     return result;

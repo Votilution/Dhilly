@@ -3,15 +3,22 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+typedef enum {
+    DHILLY_STRING_FREE,      // Please clean it up for me
+    DHILLY_STRING_NO_TOUCHY, // Hands off! I’m managing this one
+    DHILLY_STRING_CALLBACK   // Call my custom cleanup function when freeing (UNIMPLEMENTED)
+} DhillyStringCleanupStrategy;
+
 typedef struct {
     const char *data;  // Pointer to the string data
     size_t length; // Length of the string EXCLUDING the null terminator
-    bool is_static;
+    DhillyStringCleanupStrategy cleanup_strategy;
 } DhillyString;
 
 typedef enum {
     SHARD_TYPE_STRING,
-    SHARD_TYPE_FUNCTION
+    SHARD_TYPE_FUNCTION,
+    SHARD_TYPE_TEMPLATE,
 } DhillyShardType;
 
 typedef struct {
@@ -20,10 +27,16 @@ typedef struct {
 } DhillyShardCallable;
 
 typedef struct {
+    DhillyInstance instance_ptr;
+    DhillyStringArray result_str_array;
+} DhillyShardTemplate;
+
+typedef struct {
     DhillyShardType type;
     union {
-        DhillyString str;                     // For literal strings
+        DhillyString str;               // For literal strings
         DhillyShardCallable callable;   // Function pointer for dynamic content
+        DhillyShardTemplate template;
     };
 } DhillyShard;
 
@@ -50,7 +63,7 @@ typedef struct {
     DhillyStringArray* result;
 } DhillyInstance;
 
-DhillyString dhilly_string_create(const char *input, bool is_static);
+DhillyString dhilly_string_create(const char *input, DhillyStringCleanupStrategy cleanup_strategy);
 
 void dhilly_string_free(DhillyString* string);
 
