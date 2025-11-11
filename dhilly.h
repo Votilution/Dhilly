@@ -15,6 +15,17 @@ typedef struct {
     DhillyStringCleanupStrategy cleanup_strategy;
 } DhillyString;
 
+typedef struct {
+    DhillyString* data;
+    size_t size;
+    size_t total_size;
+} DhillyStringArray;
+
+typedef struct {
+    DhillyString** data; // The context is composed of an array of strings. To access these strings, an index must be leveraged.
+    size_t slots; // Although this is optional, it is used to avoid overflows. Although it shouldn't happen under normal circumstances, it is important for it to be the correct size.
+} DhillyContext;
+
 typedef enum {
     SHARD_TYPE_STRING,
     SHARD_TYPE_FUNCTION,
@@ -27,7 +38,7 @@ typedef struct {
 } DhillyShardCallable;
 
 typedef struct {
-    DhillyInstance instance_ptr;
+    void* instance_ptr;
     DhillyStringArray result_str_array;
 } DhillyShardTemplate;
 
@@ -47,21 +58,11 @@ typedef struct {
 } DhillyTemplate;
 
 typedef struct {
-    DhillyString* data;
-    size_t size;
-    size_t total_size;
-} DhillyStringArray;
-
-typedef struct {
-    DhillyString** data; // The context is composed of an array of strings. To access these strings, an index must be leveraged.
-    size_t slots; // Although this is optional, it is used to avoid overflows. Although it shouldn't happen under normal circumstances, it is important for it to be the correct size.
-} DhillyContext;
-
-typedef struct {
     DhillyTemplate* template;
     DhillyContext* context;
     DhillyStringArray* result;
 } DhillyInstance;
+
 
 DhillyString dhilly_string_create(const char *input, DhillyStringCleanupStrategy cleanup_strategy);
 

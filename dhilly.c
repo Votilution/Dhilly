@@ -34,7 +34,13 @@ void dhilly_string_free(DhillyString* string) {
 }
 
 void dhilly_shard_free(DhillyShard* shard) {
-    if (shard->type == SHARD_TYPE_STRING) dhilly_string_free(&shard->str);
+    switch (shard->type) {
+    case SHARD_TYPE_STRING:
+        dhilly_string_free(&shard->str);
+        break;
+    case SHARD_TYPE_TEMPLATE:
+        dhilly_instance_free(shard->template.instance_ptr);
+    };
 }
 
 DhillyTemplate dhilly_template_create(size_t capacity) {
@@ -77,7 +83,7 @@ void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, Dhilly
         break;
     
     case SHARD_TYPE_TEMPLATE:
-        target->template.instance_ptr = *(DhillyInstance*)contents;
+        target->template.instance_ptr = contents;
         break;
 
     default:
@@ -110,6 +116,10 @@ DhillyStringArray dhilly_template_to_string_array(DhillyTemplate* template, Dhil
     {
         char* result_str = NULL;
         DhillyString string;
+        
+        string.data = NULL;
+        string.length = 0;
+        string.cleanup_strategy = DHILLY_STRING_NO_TOUCHY;
 
         switch (shards[i].type) {
         case SHARD_TYPE_STRING:
@@ -117,6 +127,16 @@ DhillyStringArray dhilly_template_to_string_array(DhillyTemplate* template, Dhil
             break;
         case SHARD_TYPE_FUNCTION:
             string = shards[i].callable.generate(context, NULL);
+            break;
+        case SHARD_TYPE_TEMPLATE:
+            DhillyInstance* nested_instance = shards[i].template.instance_ptr;
+
+            DhillyStringArray res = dhilly_template_to_string_array(nested_instance->template, nested_instance->context);
+
+            string = dhilly_string_array_to_string(&res);
+
+            dhilly_string_array_free(&res);
+        default:
             break;
         }
 
@@ -127,7 +147,7 @@ DhillyStringArray dhilly_template_to_string_array(DhillyTemplate* template, Dhil
         }
         else
         {
-            array_data[i] = dhilly_string_create("", true);
+            array_data[i] = dhilly_string_create("", DHILLY_STRING_NO_TOUCHY);
         }
     }
 
