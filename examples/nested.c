@@ -19,7 +19,7 @@ int main() {
         nested_instance = dhilly_instance_create(&tpl, &ctx);
     }
     DhillyString s1 = dhilly_string_create("a nested ", DHILLY_STRING_NO_TOUCHY);
-    dhilly_add_shard_to_template(nested_instance.template, SHARD_TYPE_STRING, &s1, NULL);
+    dhilly_add_shard_to_template(nested_instance.template, SHARD_TYPE_STRING, &s1, 0);
 
     DhillyString dyn = dhilly_string_create("fellow", DHILLY_STRING_NO_TOUCHY);
     dhilly_context_set_string(nested_instance.context, 0, &dyn);
@@ -36,9 +36,9 @@ int main() {
     }
     DhillyString s2 = dhilly_string_create("Hello! I am ", DHILLY_STRING_NO_TOUCHY);
     DhillyString s3 = dhilly_string_create(". Nice to meet you!", DHILLY_STRING_NO_TOUCHY);
-    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_STRING, &s2, NULL);
-    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_TEMPLATE, &nested_instance, NULL);
-    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_STRING, &s3, NULL);
+    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_STRING, &s2, 0);
+    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_TEMPLATE, &nested_instance, 0);
+    dhilly_add_shard_to_template(instance.template, SHARD_TYPE_STRING, &s3, 0);
 
 
     // FLATTEN AND PRINT INSTANCE

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "dhilly.h"
+#include <stdint.h>
 
 DhillyString dhilly_string_create(const char *input, DhillyStringCleanupStrategy cleanup_strategy) {
     DhillyString str;
@@ -50,6 +51,14 @@ DhillyTemplate dhilly_template_create(size_t capacity) {
     template.shard_count = 0;
     template.shard_capacity = capacity;
 
+    DhillyArena arena;
+
+    arena.offset = 0;
+    arena.size = sizeof(char*) * 1000;
+    arena.ptr = malloc(arena.size);
+
+    template.arena = arena;
+
     return template;
 }
 
@@ -61,13 +70,19 @@ void dhilly_template_free(DhillyTemplate *template) {
     }
 
     free(template->shards);
-
+    
     template->shards = NULL;
     template->shard_count = 0;
     template->shard_capacity = 0;
+
+    free(template->arena.ptr);
+    
+    template->arena.ptr = NULL;
+    template->arena.offset = 0;
+    template->arena.size = 0;
 }
 
-void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, DhillyShardType type, void* contents, void* bound) {
+void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, DhillyShardType type, void* contents, uintptr_t bound) {
     DhillyShard *target = &template->shards[index];
 
     target->type = type;
@@ -78,7 +93,7 @@ void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, Dhilly
         break;
     
     case SHARD_TYPE_FUNCTION:
-        target->callable.generate = (DhillyString (*)(void*, void*))contents;
+        target->callable.generate = (DhillyString (*)(DhillyArena*, DhillyContext*, uintptr_t))contents;
         target->callable.bound_arg = bound;
         break;
     
@@ -91,7 +106,7 @@ void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, Dhilly
     }
 }
 
-void dhilly_add_shard_to_template(DhillyTemplate *template, DhillyShardType type, void* contents, void* bound) {
+void dhilly_add_shard_to_template(DhillyTemplate *template, DhillyShardType type, void* contents, uintptr_t bound) {
     dhilly_set_shard_in_template(template, template->shard_count, type, contents, bound);
     template->shard_count++;
 }
@@ -110,8 +125,10 @@ DhillyStringArray dhilly_template_to_string_array(DhillyTemplate* template, Dhil
     DhillyString* array_data = malloc(sizeof(DhillyString) * template->shard_count);
     size_t array_size = template->shard_count;
     size_t array_total_size = 0;
-
     size_t str_length;
+
+    template->arena.offset = 0;
+
     for (size_t i = 0; i < template->shard_count; i++)
     {
         char* result_str = NULL;
@@ -125,17 +142,18 @@ DhillyStringArray dhilly_template_to_string_array(DhillyTemplate* template, Dhil
         case SHARD_TYPE_STRING:
             string = shards[i].str;
             break;
+
         case SHARD_TYPE_FUNCTION:
-            string = shards[i].callable.generate(context, NULL);
+            string = shards[i].callable.generate(&template->arena, context, shards[i].callable.bound_arg);
             break;
+
         case SHARD_TYPE_TEMPLATE:
             DhillyInstance* nested_instance = shards[i].template.instance_ptr;
 
             DhillyStringArray res = dhilly_template_to_string_array(nested_instance->template, nested_instance->context);
-
             string = dhilly_string_array_to_string(&res);
-
             dhilly_string_array_free(&res);
+
         default:
             break;
         }
@@ -215,18 +233,24 @@ void dhilly_context_free(DhillyContext* context) {
     context->slots = 0;
 }
 
-DhillyString dhilly_print_text(DhillyContext* ctx, size_t bound) {
+DhillyString dhilly_print_text(DhillyArena* arena, DhillyContext* ctx, uintptr_t bound) {
     DhillyString* str = ctx->data[bound];
+    printf("%dq", bound);
     size_t len = str->length;
 
-    char *copy = malloc(len + 1); // +1 for Null terminator
+    char *copy = arena->ptr + arena->offset; // +1 for Null terminator
 
     if (copy) {
         memcpy(copy, str->data, len);
         copy[len] = '\0';
     }
 
-    return dhilly_string_create(copy, false);
+    printf("%d\n", arena->offset);
+    arena->offset += len + 1;
+    printf("%d\n", arena->offset);
+    printf("%s\n", copy);
+
+    return dhilly_string_create(copy, DHILLY_STRING_NO_TOUCHY);
 }
 
 /* Here we get into the nitty gritty! DhillyInstance is a wrapper struct for DhillyTemplate and DhillyContext that allows

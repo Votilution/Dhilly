@@ -2,12 +2,19 @@
 
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef enum {
     DHILLY_STRING_FREE,      // Please clean it up for me
     DHILLY_STRING_NO_TOUCHY, // Hands off! I’m managing this one
     DHILLY_STRING_CALLBACK   // Call my custom cleanup function when freeing (UNIMPLEMENTED)
 } DhillyStringCleanupStrategy;
+
+typedef struct {
+    char *ptr;
+    size_t size;
+    size_t offset;
+} DhillyArena;
 
 typedef struct {
     const char *data;  // Pointer to the string data
@@ -33,8 +40,8 @@ typedef enum {
 } DhillyShardType;
 
 typedef struct {
-    DhillyString (*generate)(void* context, void* bound_arg);
-    void* bound_arg;
+    DhillyString (*generate)(DhillyArena* arena, DhillyContext* context, uintptr_t bound_arg);
+    uintptr_t bound_arg;
 } DhillyShardCallable;
 
 typedef struct {
@@ -55,6 +62,8 @@ typedef struct {
     DhillyShard* shards;
     size_t shard_count;
     size_t shard_capacity;
+
+    DhillyArena arena;
 } DhillyTemplate;
 
 typedef struct {
@@ -62,7 +71,6 @@ typedef struct {
     DhillyContext* context;
     DhillyStringArray* result;
 } DhillyInstance;
-
 
 DhillyString dhilly_string_create(const char *input, DhillyStringCleanupStrategy cleanup_strategy);
 
@@ -74,9 +82,9 @@ DhillyTemplate dhilly_template_create(size_t capacity);
 
 void dhilly_template_free(DhillyTemplate *template);
 
-void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, DhillyShardType type, void* contents, void* bound);
+void dhilly_set_shard_in_template(DhillyTemplate *template, size_t index, DhillyShardType type, void* contents, uintptr_t bound);
 
-void dhilly_add_shard_to_template(DhillyTemplate *template, DhillyShardType type, void* contents, void* bound);
+void dhilly_add_shard_to_template(DhillyTemplate *template, DhillyShardType type, void* contents, uintptr_t bound);
 
 DhillyContext dhilly_context_create(size_t slots);
 
@@ -94,4 +102,4 @@ DhillyInstance dhilly_instance_create(DhillyTemplate* tpl, DhillyContext* ctx);
 
 void dhilly_instance_free(DhillyInstance* instance);
 
-DhillyString dhilly_print_text(DhillyContext* ctx, size_t bound);
+DhillyString dhilly_print_text(DhillyArena* arena, DhillyContext* ctx, size_t bound);
