@@ -43,6 +43,9 @@ int main() {
 
     dhilly_add_shard_to_template(&example, SHARD_TYPE_FUNCTION, dhilly_print_text, 1);
 
+    // We initialize ram n shi.
+    dhilly_template_init(&example);
+
     DhillyStringArray dhilly_result = dhilly_template_to_string_array(&example, &context); // dhilly_print_text will return mega
     
     printf("Zero-allocation printing example:\n");
@@ -54,7 +57,7 @@ int main() {
 
     fwrite(example.arena.ptr, 1, example.arena.offset, stdout);
 
-    printf(" - Plus %d unused bytes", example.arena.size - example.arena.offset);
+    printf(" - Plus %d unused bytes", example.arena.size + example.arena.size - example.arena.offset);
     
 cleanup:
     dhilly_string_array_free(&dhilly_result);

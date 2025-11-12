@@ -100,6 +100,8 @@ void dhilly_context_free(DhillyContext* context);
 
 DhillyInstance dhilly_instance_create(DhillyTemplate* tpl, DhillyContext* ctx);
 
+void dhilly_template_init(DhillyTemplate* template);
+
 void dhilly_instance_free(DhillyInstance* instance);
 
 DhillyString dhilly_print_text(DhillyArena* arena, DhillyContext* ctx, size_t bound);

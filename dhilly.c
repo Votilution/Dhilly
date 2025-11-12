@@ -51,15 +51,16 @@ DhillyTemplate dhilly_template_create(size_t capacity) {
     template.shard_count = 0;
     template.shard_capacity = capacity;
 
-    DhillyArena arena;
+}
 
+void dhilly_template_init(DhillyTemplate *template) {
+    DhillyArena arena;
+    
     arena.offset = 0;
     arena.size = sizeof(char*) * 1000;
     arena.ptr = malloc(arena.size);
-
-    template.arena = arena;
-
-    return template;
+    
+    template->arena = arena;
 }
 
 void dhilly_template_free(DhillyTemplate *template) {
